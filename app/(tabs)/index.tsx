@@ -16,30 +16,41 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useInfiniteQuery, useQuery } from "react-query";
 import { AntDesign } from "@expo/vector-icons";
 import Card from "../../components/Card";
+import { Main } from "../../types/TopAnime";
+import React from "react";
+
+const fetchAnimePage = async (page: number): Promise<Main> => {
+  const res = await fetch(`https://api.jikan.moe/v4/top/anime?page=${page}`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch anime data");
+  }
+  return res.json();
+};
 
 export default function TabOneScreen() {
   const { data, error, isLoading, fetchNextPage, hasNextPage } =
     useInfiniteQuery({
-      queryKey: ["jsonPlaceholder"],
+      queryKey: ["topAnime"],
       getNextPageParam: (lastPage: any) => {
         if (lastPage.pagination.has_next_page) {
           return lastPage.pagination.current_page + 1;
         }
       },
-      queryFn: async ({ pageParam = 1 }) => {
-        const res = await fetch(
-          `https://api.jikan.moe/v4/top/anime?page=${pageParam}`
-        );
-        return res.json();
-      },
+      queryFn: async ({ pageParam = 1 }) => fetchAnimePage(pageParam),
       cacheTime: 1000 * 60 * 5,
     });
+  const [loadingMore, setLoadingMore] = React.useState(false);
 
   const loadMore = () => {
+    setLoadingMore(true);
     if (hasNextPage) {
       fetchNextPage();
+      setLoadingMore(false);
     }
   };
+  const windowWidth = useWindowDimensions().width;
+  const itemWidth = 100; // Misalnya lebar item adalah 100 (dalam satuan piksel)
+  const numColumns = Math.floor(windowWidth / itemWidth);
 
   if (isLoading) {
     return (
@@ -68,7 +79,6 @@ export default function TabOneScreen() {
           gap: 10,
         }}
       >
-        {/* unlimiate */}
         <Box
           width={"35%"}
           borderTopRadius={"xl"}
@@ -98,7 +108,6 @@ export default function TabOneScreen() {
 
         <FlatList
           columnWrapperStyle={{
-            justifyContent: "space-between",
             gap: 1,
           }}
           onEndReached={() => {
@@ -110,13 +119,15 @@ export default function TabOneScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           keyboardDismissMode='on-drag'
           showsVerticalScrollIndicator={false}
-          numColumns={3}
+          numColumns={numColumns}
           renderItem={({ item }) => (
-            <Card
-              ImagesURL={item.images.jpg.image_url}
-              title={item.title}
-              score={item.score}
-            />
+            <Box width={100 / numColumns + "%"}>
+              <Card
+                ImagesURL={item.images.jpg.image_url}
+                title={item.title}
+                score={item.score}
+              />
+            </Box>
           )}
         />
       </Box>
